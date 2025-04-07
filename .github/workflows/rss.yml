@@ -1,0 +1,28 @@
+name: RSS to Google Sheets
+
+on:
+  schedule:
+    - cron: '0 23 * * *'  # UTCで23時＝日本時間8時
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをクローン
+        uses: actions/checkout@v3
+
+      - name: Pythonをセットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: ライブラリをインストール
+        run: |
+          pip install gspread oauth2client feedparser
+
+      - name: スクリプトを実行
+        env:
+          GOOGLE_SHEET_CREDENTIALS: ${{ secrets.GOOGLE_SHEET_CREDENTIALS }}
+        run: python rss_to_sheet.py
