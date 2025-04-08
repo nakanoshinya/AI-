@@ -93,4 +93,28 @@ if rows_to_append:
 else:
     print("新しい記事はありませんでした。")
 
+print(f"[LOG] 全RSSフィード数: {len(rss_urls)}")
+
+for rss_url in rss_urls:
+    print(f"[LOG] 処理中のRSS: {rss_url}")
+    feed = feedparser.parse(rss_url)
+    print(f"[LOG] 記事数: {len(feed.entries)}")
+
+    for entry in feed.entries:
+        title = entry.title
+        link = entry.link
+        print(f"[LOG] 処理中のタイトル: {title}")
+        print(f"[LOG] URL: {link}")
+
+        if link in existing_urls:
+            print("[SKIP] 重複URLなのでスキップ")
+            continue
+
+        summary = summarize_with_gemini(title, link)
+        print(f"[LOG] 要約: {summary[:50]}...")  # 要約の冒頭だけ
+
+        row_final = [pub_date, title, link, media, summary, "", "RSS"]
+        rows_to_append.append(row_final)
+
+print(f"[RESULT] 書き込む行数: {len(rows_to_append)}")
 
