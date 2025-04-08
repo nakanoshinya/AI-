@@ -20,7 +20,7 @@ jobs:
 
       - name: ライブラリをインストール
         run: |
-          pip install gspread oauth2client feedparser
+          pip install gspread oauth2client feedparser google-generativeai
 
       - name: スクリプトを実行
         env:
