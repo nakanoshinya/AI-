@@ -26,7 +26,7 @@ def summarize_with_gemini(title, url):
     失敗した場合は、詳細なエラーメッセージを返す。
     """
     prompt = f"以下の記事の内容を要約してください：\n\nタイトル：{title}\nURL：{url}"
-    model = genai.GenerativeModel("gemini-pro")
+    model = genai.GenerativeModel("gemini-1.5-pro-latest")
     try:
         response = model.generate_content(prompt)
         print("[DEBUG] Gemini response:", response)
