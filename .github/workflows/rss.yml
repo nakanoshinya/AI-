@@ -25,4 +25,5 @@ jobs:
       - name: スクリプトを実行
         env:
           GOOGLE_SHEET_CREDENTIALS: ${{ secrets.GOOGLE_SHEET_CREDENTIALS }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python rss_to_sheet.py
