@@ -1,49 +1,63 @@
+import os
 import feedparser
 import gspread
-from datetime import datetime
 from oauth2client.service_account import ServiceAccountCredentials
-import os
-import json
+import google.generativeai as genai
 
-# --- 認証 ---
-cred_json = os.environ['GOOGLE_SHEET_CREDENTIALS']
-cred_data = json.loads(cred_json)
+# --- 環境変数から認証情報を取得 ---
+cred_json = os.environ["GOOGLE_SHEET_CREDENTIALS"]
+import json
+creds_dict = json.loads(cred_json)
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(cred_data, scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-sheet = client.open("URL自動").sheet1  # スプレッドシート名をここで指定
+# --- Gemini APIキー設定 ---
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-# --- 既存URLを取得（重複防止） ---
-existing_urls = sheet.col_values(6)  # C列 = URL列
+# --- 要約関数 ---
+def summarize_with_gemini(title, url):
+    prompt = f"以下の記事を読んで内容を要約してください：\n\nタイトル：{title}\nURL：{url}"
+    model = genai.GenerativeModel("gemini-pro")
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        return f"[要約失敗] {e}"
 
-# --- RSSフィード一覧 ---
-rss_feeds = {
-    "Googleニュース（生成AI）": "https://news.google.com/rss/search?q=生成AI&hl=ja&gl=JP&ceid=JP:ja",
-    "The Decoder": "https://the-decoder.com/feed/",
-    "TechCrunch（AI）": "https://techcrunch.com/tag/generative-ai/feed/"
-}
+# --- RSSフィード一覧（必要に応じて変更） ---
+rss_urls = [
+    "https://news.yahoo.co.jp/rss/topics/top-picks.xml",
+    "https://gigazine.net/news/rss_2.0/",
+    "https://www.itmedia.co.jp/rss/2.0/news_bursts.xml"
+]
 
-new_entries = []
+# --- スプレッドシート設定 ---
+sheet = client.open("URL自動").sheet1
 
-for source, url in rss_feeds.items():
+# --- 既存URLの取得（重複チェック用） ---
+existing_urls = [row[5] for row in sheet.get_all_values()[1:] if len(row) > 5]
+
+# --- RSS処理開始 ---
+new_count = 0
+for url in rss_urls:
     feed = feedparser.parse(url)
     for entry in feed.entries:
         title = entry.title
         link = entry.link
-        pub_date = entry.get("published", datetime.now().strftime("%Y-%m-%d"))
-        media = source
+        pub_date = entry.published if "published" in entry else ""
+        media = entry.get("source", {}).get("title", "RSS")
 
         if link in existing_urls:
             continue
 
-        # [B, F, E, A, D, C, G]
-        row = [title, "", "", pub_date, media, link, "RSS"]
-        new_entries.append(row)
+        # 要約実行
+        summary = summarize_with_gemini(title, link)
 
-if new_entries:
-    sheet.append_rows(new_entries, value_input_option="USER_ENTERED")
-    print(f"{len(new_entries)} 件の新しい記事を追加しました。")
-else:
-    print("新しい記事はありませんでした。")
+        # B:タイトル, F:キーワード, E:要約, A:日付, D:媒体, C:URL, G:収集元
+        row = [pub_date, media, link, title, summary, "", "RSS"]
+        sheet.append_row(row)
+        new_count += 1
+
+print(f"{new_count} 件の新しい記事を追加しました。")
