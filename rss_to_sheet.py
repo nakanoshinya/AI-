@@ -64,37 +64,33 @@ new_count = 0
 # --- RSS処理開始 ---
 for rss_url in rss_urls:
     feed = feedparser.parse(rss_url)
+    # --- バッチ更新用のリストを準備 ---
+rows_to_append = []
+
+for rss_url in rss_urls:
+    feed = feedparser.parse(rss_url)
     for entry in feed.entries:
         title = entry.title
         link = entry.link
-        pub_date = entry.get("published", "")  # 出版日がない場合は空文字
-        media = "RSS"  # ここは必要に応じて entry.source.title 等に変更可能
-
+        pub_date = entry.get("published", "")
+        media = "RSS"
+        
         if link in existing_urls:
-            continue  # 重複判定
-
+            continue  # 重複はスキップ
+        
         # Geminiで要約取得
         summary = summarize_with_gemini(title, link)
         
-        # スプレッドシートのカラム順（B, F, E, A, D, C, G）に合わせる
-        # ここでは、例として次のように入れる：
-        #   - B列: タイトル
-        #   - F列: （キーワード・タグ、ここは空）
-        #   - E列: 要約
-        #   - A列: 日付（pub_date）
-        #   - D列: 媒体（media）
-        #   - C列: URL
-        #   - G列: 収集元（"RSS"）
-        row = [pub_date, title, link, media, summary, "", "RSS"]
-        # ただし、あなたの既存のレイアウトが「B→F→E→A→D→C→G」なら
-        # それに合わせるために順序を調整してください。
-        # 以下は一例です。必要に応じて調整してください。
-        # 例えば、もし B列にタイトル、F列が空欄、E列が要約、
-        # A列に日付、D列に媒体、C列にURL、G列に収集元なら：
+        # あなたのスプレッドシートのカラム順（B→F→E→A→D→C→G）に合わせる例：
+        # ※実際の並びに合わせて適宜調整してください
         row_final = [pub_date, title, link, media, summary, "", "RSS"]
-        
-        sheet.append_row(row_final, value_input_option="USER_ENTERED")
-        new_count += 1
+        rows_to_append.append(row_final)
 
-print(f"{new_count} 件の新しい記事を追加しました。")
+# 追加する行がある場合、一度に追加
+if rows_to_append:
+    sheet.append_rows(rows_to_append, value_input_option="USER_ENTERED")
+    print(f"{len(rows_to_append)} 件の新しい記事を一括追加しました。")
+else:
+    print("新しい記事はありませんでした。")
+
 
