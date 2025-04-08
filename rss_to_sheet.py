@@ -17,15 +17,24 @@ client = gspread.authorize(creds)
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # --- 要約関数 ---
+
 def summarize_with_gemini(title, url):
     prompt = f"以下の記事の内容を要約してください：\n\nタイトル：{title}\nURL：{url}"
     model = genai.GenerativeModel("gemini-pro")
     try:
         response = model.generate_content(prompt)
-        # 要約の取得方法を変更（安全策）
-        return response.candidates[0].content.parts[0].text.strip()
+        
+        # --- レスポンスの中身に応じて取得 ---
+        if hasattr(response, "text"):
+            return response.text.strip()
+        elif hasattr(response, "candidates") and response.candidates:
+            return response.candidates[0].content.parts[0].text.strip()
+        else:
+            return "[要約失敗] 要約レスポンスの構造を解析できませんでした。"
+    
     except Exception as e:
         return f"[要約失敗] {e}"
+
 
 
 # --- RSSフィード一覧（必要に応じて変更） ---
