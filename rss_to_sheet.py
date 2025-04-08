@@ -18,13 +18,15 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # --- 要約関数 ---
 def summarize_with_gemini(title, url):
-    prompt = f"以下の記事を読んで内容を要約してください：\n\nタイトル：{title}\nURL：{url}"
+    prompt = f"以下の記事の内容を要約してください：\n\nタイトル：{title}\nURL：{url}"
     model = genai.GenerativeModel("gemini-pro")
     try:
         response = model.generate_content(prompt)
-        return response.text.strip()
+        # 要約の取得方法を変更（安全策）
+        return response.candidates[0].content.parts[0].text.strip()
     except Exception as e:
         return f"[要約失敗] {e}"
+
 
 # --- RSSフィード一覧（必要に応じて変更） ---
 rss_urls = [
